@@ -16,4 +16,4 @@ RUN apk --update add git bzr go g++ libpcap-dev \
   && apk del go git bzr g++ libpcap-dev \
   && rm -rf $GOPATH /var/cache/apk/*
 
-CMD exec /coco-traffic-analyser-app
+CMD exec /coco-traffic-analyser
