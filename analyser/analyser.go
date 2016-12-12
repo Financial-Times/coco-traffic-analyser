@@ -12,7 +12,7 @@ import (
 )
 
 type Analyser interface {
-	TrafficGraph() WeightedGraph
+	TrafficGraph() *WeightedGraph
 }
 
 type StandardAnalyser struct {
@@ -39,11 +39,11 @@ func (a *StandardAnalyser) Start() {
 	}
 
 	// Set up assembly
-	streamFactory := &httpStreamFactory{}
+	streamFactory := newHttpStreamFactory(a.graph)
 	streamPool := tcpassembly.NewStreamPool(streamFactory)
 	assembler := tcpassembly.NewAssembler(streamPool)
 
-	log.Println("reading in packets")
+	log.Info("reading in packets")
 	// Read in packets, pass to assembler.
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	packets := packetSource.Packets()
@@ -57,14 +57,11 @@ func (a *StandardAnalyser) Start() {
 			}
 
 			if packet.NetworkLayer() == nil || packet.TransportLayer() == nil || packet.TransportLayer().LayerType() != layers.LayerTypeTCP {
-				log.Println("Unusable packet")
+				log.Debug("Unusable packet")
 				continue
 			}
 			tcp := packet.TransportLayer().(*layers.TCP)
 			assembler.AssembleWithTimestamp(packet.NetworkLayer().NetworkFlow(), tcp, packet.Metadata().Timestamp)
-
-			//log.Info(packet)
-
 		case <-ticker:
 			// Every minute, flush connections that haven't seen activity in the past 2 minutes.
 			assembler.FlushOlderThan(time.Now().Add(time.Minute * -2))
